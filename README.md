@@ -11,6 +11,15 @@ This allows you to securely store B2C credentials without keeping them in files 
 
 ## Installation
 
+Install directly from GitHub:
+
+```bash
+b2c plugins install sfcc-solutions-share/b2c-plugin-macos-keychain
+
+# Verify installation
+b2c plugins
+```
+
 ### Development Installation
 
 For local development:
