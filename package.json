@@ -1,0 +1,35 @@
+{
+  "name": "b2c-plugin-macos-keychain",
+  "version": "0.1.0",
+  "description": "B2C CLI plugin for macOS Keychain credential storage",
+  "author": "Charles Lavery",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "oclif": {
+    "hooks": {
+      "b2c:config-sources": "./dist/hooks/config-sources.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "@oclif/core": "^4"
+  },
+  "devDependencies": {
+    "@oclif/core": "^4",
+    "@types/node": "^22",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
