@@ -8,7 +8,7 @@
  */
 
 // TODO: Import from @salesforce/b2c-tooling-sdk/config once published to npm
-import type {ConfigSource, NormalizedConfig, ResolveConfigOptions} from '../types.js';
+import type {ConfigSource, ConfigLoadResult, NormalizedConfig, ResolveConfigOptions} from '../types.js';
 import {getConfigFromKeychain} from './keychain.js';
 
 /** Default service name for keychain entries */
@@ -72,16 +72,22 @@ export class KeychainSource implements ConfigSource {
    * 4. Return merged config (minus defaultInstance meta-field)
    *
    * @param options - Resolution options including instance selection
-   * @returns Normalized config with credentials, or undefined if not available
+   * @returns Config and location, or undefined if not available
    */
-  load(options: ResolveConfigOptions): NormalizedConfig | undefined {
+  load(options: ResolveConfigOptions): ConfigLoadResult | undefined {
     // Only works on macOS
     if (process.platform !== 'darwin') {
       return undefined;
     }
 
+    const locationParts: string[] = [];
+
     // Step 1: Load global defaults from * account
     const globalConfig = getConfigFromKeychain(this.service, GLOBAL_ACCOUNT) as KeychainConfig | undefined;
+
+    if (globalConfig) {
+      locationParts.push(`keychain:${this.service}:${GLOBAL_ACCOUNT}`);
+    }
 
     // Step 2: Determine instance (flag → defaultInstance → env var)
     const instance =
@@ -89,6 +95,10 @@ export class KeychainSource implements ConfigSource {
 
     // Step 3: Load instance-specific config if we have an instance
     const instanceConfig = instance ? getConfigFromKeychain(this.service, instance) : undefined;
+
+    if (instanceConfig) {
+      locationParts.push(`keychain:${this.service}:${instance}`);
+    }
 
     // If neither global nor instance config exists, return undefined
     if (!globalConfig && !instanceConfig) {
@@ -104,14 +114,9 @@ export class KeychainSource implements ConfigSource {
     // Remove the defaultInstance meta-field from the result
     delete (merged as KeychainConfig).defaultInstance;
 
-    return merged;
-  }
-
-  /**
-   * Get the path description for this source.
-   * Returns the keychain service name for diagnostics.
-   */
-  getPath(): string | undefined {
-    return `keychain:${this.service}`;
+    return {
+      config: merged,
+      location: locationParts.join(','),
+    };
   }
 }

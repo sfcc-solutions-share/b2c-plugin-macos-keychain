@@ -38,6 +38,19 @@ export interface ResolveConfigOptions {
 }
 
 /**
+ * Result of loading configuration from a source.
+ */
+export interface ConfigLoadResult {
+  /** The loaded configuration */
+  config: NormalizedConfig;
+  /**
+   * Location of the source (for diagnostics).
+   * May be a file path, keychain entry, URL, or other identifier.
+   */
+  location?: string;
+}
+
+/**
  * Interface for configuration sources.
  */
 export interface ConfigSource {
@@ -47,14 +60,9 @@ export interface ConfigSource {
   /**
    * Load configuration from this source.
    * @param options - Resolution options
-   * @returns Configuration object, or undefined if source is not available
+   * @returns Config and location from this source, or undefined if source is not available
    */
-  load(options: ResolveConfigOptions): NormalizedConfig | undefined;
-
-  /**
-   * Get the path to the configuration source (for diagnostics).
-   */
-  getPath?(): string | undefined;
+  load(options: ResolveConfigOptions): ConfigLoadResult | undefined;
 }
 
 /**
