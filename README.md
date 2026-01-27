@@ -88,6 +88,7 @@ The `-U` flag updates the entry if it already exists.
   "password": "webdav-access-key",
   "clientId": "oauth-client-id",
   "clientSecret": "oauth-client-secret",
+  "mrtApiKey": "....mrt-api-key",
   "hostname": "dev01-realm-customer.demandware.net",
   "codeVersion": "version1",
   "shortCode": "abcd1234"
@@ -102,7 +103,7 @@ The plugin resolves configuration in this order:
 
 1. **Load global defaults** from the `*` account (if exists)
 2. **Determine instance** (in priority order):
-   - `--instance` CLI flag
+   - `--instance`, `-i` CLI flag
    - `defaultInstance` from `*` config
    - `SFCC_KEYCHAIN_INSTANCE` environment variable
 3. **Load instance-specific config** and merge (instance overrides global)
