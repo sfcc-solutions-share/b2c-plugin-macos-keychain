@@ -71,12 +71,43 @@ security add-generic-password -s 'b2c-cli' -a 'staging' \
 
 The `-U` flag updates the entry if it already exists.
 
+### MRT Origin-Scoped Credentials
+
+Managed Runtime (MRT) commands resolve their API key against a **cloud origin**
+(`--cloud-origin`, `MRT_CLOUD_ORIGIN` / `SFCC_MRT_CLOUD_ORIGIN`, or `mrtOrigin`
+in `dw.json`). You can store an MRT API key scoped to a specific origin in an
+`mrt:<hostname>` account:
+
+```bash
+security add-generic-password -s 'b2c-cli' -a 'mrt:cloud-staging.mobify.com' \
+  -w '{"mrtApiKey":"my-mrt-key"}' -U
+```
+
+```bash
+b2c mrt push --cloud-origin https://cloud-staging.mobify.com
+```
+
+The account name is the **hostname only** — no scheme, no trailing slash. The
+plugin normalizes whatever origin form is in play down to a hostname before the
+lookup, so the key above resolves whether the command used
+`--cloud-origin https://cloud-staging.mobify.com`,
+`--cloud-origin cloud-staging.mobify.com`, or a `dw.json` `mrtOrigin`. This
+mirrors the `~/.mobify--[hostname]` convention the CLI uses for its built-in MRT
+credentials file.
+
+> **Default origin:** when no origin is provided, the plugin falls back to the
+> default MRT hostname `cloud.mobify.com`, so an `mrt:cloud.mobify.com` entry
+> resolves for a plain `b2c mrt push` with no `--cloud-origin`. (The SDK applies
+> the default origin only *after* resolution, so the plugin mirrors that default
+> itself.) If no matching `mrt:<hostname>` entry exists, this lookup contributes
+> nothing and resolution falls through to your instance and `*` entries as usual.
+
 ### Keychain Entry Structure
 
 | Field | Value |
 |-------|-------|
 | Service (`-s`) | `b2c-cli` (configurable via `SFCC_KEYCHAIN_SERVICE`) |
-| Account (`-a`) | `*` for global defaults, or instance name |
+| Account (`-a`) | `*` for global defaults, an instance name, or `mrt:<hostname>` for an MRT origin |
 | Password (`-w`) | JSON object with credentials |
 
 ### Supported JSON Fields
@@ -88,6 +119,8 @@ The `-U` flag updates the entry if it already exists.
   "password": "webdav-access-key",
   "clientId": "oauth-client-id",
   "clientSecret": "oauth-client-secret",
+  "slasClientId": "slas-client-id",
+  "slasClientSecret": "slas-client-secret",
   "mrtApiKey": "....mrt-api-key",
   "hostname": "dev01-realm-customer.demandware.net",
   "codeVersion": "version1",
@@ -106,12 +139,18 @@ The plugin resolves configuration in this order:
    - `--instance`, `-i` CLI flag
    - `defaultInstance` from `*` config
    - `SFCC_KEYCHAIN_INSTANCE` environment variable
-3. **Load instance-specific config** and merge (instance overrides global)
-4. **Return merged config** to CLI
+3. **Load instance-specific config** (if an instance was determined)
+4. **Load MRT origin-scoped config** from `mrt:<hostname>`. The hostname is the
+   normalized `--cloud-origin` (or `MRT_CLOUD_ORIGIN` / `dw.json` `mrtOrigin`); when
+   **no origin is provided**, the default MRT hostname `cloud.mobify.com` is used,
+   so a `mrt:cloud.mobify.com` entry resolves for plain `b2c mrt ...` commands. If
+   no matching entry exists, this layer simply contributes nothing.
+5. **Merge** the layers (see below) and **return** the result to the CLI
 
 ### Merge Behavior
 
-Instance-specific values override global values at the field level:
+Layers merge with precedence **global (`*`) < instance < MRT origin** — the
+most-specific layer wins per field:
 
 ```
 * = {"clientId": "shared", "clientSecret": "shared-secret", "username": "default-user"}
@@ -119,6 +158,41 @@ staging = {"username": "staging-user", "password": "staging-pass"}
 
 Result = {"clientId": "shared", "clientSecret": "shared-secret", "username": "staging-user", "password": "staging-pass"}
 ```
+
+The global `*` layer is **always** a base layer — a more-specific entry overrides
+only the fields it defines, it does not replace `*` wholesale. This is what makes
+the "shared OAuth in `*`, per-instance WebDAV credentials" pattern work.
+
+When an MRT origin matches, its fields win over both:
+
+```
+* = {"clientId": "shared", "mrtApiKey": "global-mrt-key"}
+mrt:cloud-staging.mobify.com = {"mrtApiKey": "staging-mrt-key"}
+
+# with --cloud-origin https://cloud-staging.mobify.com
+Result = {"clientId": "shared", "mrtApiKey": "staging-mrt-key"}
+```
+
+#### Credential-group protection
+
+Credential **pairs** are kept whole — they never straddle two layers. The grouped
+pairs are `clientId`+`clientSecret`, `username`+`password`, and
+`slasClientId`+`slasClientSecret`. The most-specific layer that defines *any* field
+of a pair owns the **whole** pair; a less-specific layer cannot supply the missing
+half. This prevents an incoherent credential (e.g. a `clientId` from one entry glued
+to a `clientSecret` from another), mirroring the protection the B2C SDK applies
+across configuration sources.
+
+```
+* = {"clientId": "global-id", "clientSecret": "global-secret"}
+staging = {"clientId": "staging-id"}          # only half the pair
+
+# clientSecret is NOT borrowed from * — the pair stays within the staging layer
+Result = {"clientId": "staging-id"}
+```
+
+Independent (non-paired) fields — `hostname`, `codeVersion`, `mrtApiKey`,
+`shortCode`, etc. — always cascade field-by-field with most-specific winning.
 
 ## Usage Examples
 
@@ -162,6 +236,22 @@ security add-generic-password -s 'b2c-cli' -a '*' \
 # dw.json provides hostname, username, password
 # Keychain provides clientId, clientSecret
 b2c code deploy
+```
+
+### Per-Origin MRT API Keys
+
+```bash
+# Store an MRT key for the staging cloud origin
+security add-generic-password -s 'b2c-cli' -a 'mrt:cloud-staging.mobify.com' \
+  -w '{"mrtApiKey":"staging-mrt-key"}' -U
+
+# Store a different MRT key for production
+security add-generic-password -s 'b2c-cli' -a 'mrt:cloud.mobify.com' \
+  -w '{"mrtApiKey":"prod-mrt-key"}' -U
+
+# The matching key is selected by --cloud-origin
+b2c mrt push --cloud-origin https://cloud-staging.mobify.com   # uses staging-mrt-key
+b2c mrt push --cloud-origin https://cloud.mobify.com           # uses prod-mrt-key
 ```
 
 ## Environment Variables

@@ -17,6 +17,8 @@ export interface NormalizedConfig {
   password?: string;
   clientId?: string;
   clientSecret?: string;
+  slasClientId?: string;
+  slasClientSecret?: string;
   scopes?: string[];
   shortCode?: string;
   mrtProject?: string;
@@ -35,6 +37,14 @@ export interface ResolveConfigOptions {
   configPath?: string;
   /** Starting directory for file searches */
   startDir?: string;
+  /**
+   * MRT cloud origin (from `--cloud-origin`, `MRT_CLOUD_ORIGIN` /
+   * `SFCC_MRT_CLOUD_ORIGIN`, or `mrtOrigin` in dw.json). The SDK resolver
+   * delivers this as-is (un-normalized) — it may be a bare hostname, a full
+   * URL, or carry a trailing slash. Sources that key off it must normalize
+   * themselves (see {@link KeychainSource}, which reduces it to a hostname).
+   */
+  cloudOrigin?: string;
 }
 
 /**
