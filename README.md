@@ -4,6 +4,8 @@ A plugin for the [B2C CLI](https://github.com/SalesforceCommerceCloud/b2c-develo
 
 This allows you to securely store B2C credentials without keeping them in files like `dw.json` or environment variables.
 
+It also keeps the CLI's sign-in sessions (the access and refresh tokens from `b2c auth login`, `b2c auth client`, and browser sign-in) in the Keychain instead of a file in the CLI data directory. See [Sign-in Sessions](#sign-in-sessions).
+
 ## Prerequisites
 
 - [B2C CLI](https://github.com/SalesforceCommerceCloud/b2c-developer-tooling) installed
@@ -254,12 +256,30 @@ b2c mrt push --cloud-origin https://cloud-staging.mobify.com   # uses staging-mr
 b2c mrt push --cloud-origin https://cloud.mobify.com           # uses prod-mrt-key
 ```
 
+## Sign-in Sessions
+
+With this plugin installed, B2C CLI versions that support the `b2c:auth-session-store` hook keep sign-in sessions in the Keychain instead of `auth-sessions.json`. Older CLI versions ignore the hook and keep using the file.
+
+Sessions are stored under the service `b2c-cli.auth-sessions` (or `<SFCC_KEYCHAIN_SERVICE>.auth-sessions`), split across items named `chunk-0`, `chunk-1`, and so on. They're written through `security`'s standard input, so tokens never appear in the process list. Manage them with the CLI rather than by hand:
+
+```bash
+b2c auth status   # list stored sessions
+b2c auth logout   # remove them from the Keychain
+```
+
+Existing sessions aren't moved into the Keychain. Run `b2c auth logout` before installing the plugin to remove the old session file, then sign in again.
+
+To keep sessions in the default file and use the plugin only for credentials, set `SFCC_KEYCHAIN_AUTH_SESSIONS=false`.
+
+The VS Code extension keeps its sessions in VS Code secret storage. To share sessions with the CLI through this plugin, turn on the `b2c-dx.auth.usePluginSessionStore` setting.
+
 ## Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SFCC_KEYCHAIN_SERVICE` | Service name in keychain | `b2c-cli` |
 | `SFCC_KEYCHAIN_INSTANCE` | Fallback instance name | (none) |
+| `SFCC_KEYCHAIN_AUTH_SESSIONS` | Set to `false` to keep sign-in sessions in the CLI's default file | `true` |
 
 ## Managing Credentials
 

@@ -12,7 +12,8 @@
   ],
   "oclif": {
     "hooks": {
-      "b2c:config-sources": "./dist/hooks/config-sources.js"
+      "b2c:config-sources": "./dist/hooks/config-sources.js",
+      "b2c:auth-session-store": "./dist/hooks/auth-session-store.js"
     }
   },
   "scripts": {

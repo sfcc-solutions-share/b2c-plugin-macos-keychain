@@ -29,4 +29,11 @@
  */
 
 export {KeychainSource} from './sources/keychain-source.js';
-export type {ConfigSource, NormalizedConfig, ResolveConfigOptions} from './types.js';
+export {KeychainAuthSessionBackend} from './sessions/keychain-auth-session-backend.js';
+export type {
+  AuthSession,
+  AuthSessionBackend,
+  ConfigSource,
+  NormalizedConfig,
+  ResolveConfigOptions,
+} from './types.js';

@@ -99,12 +99,61 @@ export interface ConfigSourcesHookResult {
  */
 export type ConfigSourcesHook = Hook<'b2c:config-sources'>;
 
+/**
+ * A sign-in session stored by the B2C CLI (mirrors the SDK's `AuthSession`).
+ * Backends store it as-is; only `clientId` is used as a key.
+ */
+export interface AuthSession {
+  clientId: string;
+  flow: 'pkce' | 'implicit' | 'client-credentials';
+  accessToken: string;
+  refreshToken?: string | null;
+  lastUsedAt?: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * Auth-session store interface (mirrors the SDK's `AuthSessionBackend`).
+ */
+export interface AuthSessionBackend {
+  find(clientId: string): AuthSession | null;
+  save(session: AuthSession): void;
+  delete(clientId: string): void;
+  list(): AuthSession[];
+  clearAll(): void;
+  flush?(): Promise<void>;
+}
+
+/**
+ * Options passed to the b2c:auth-session-store hook.
+ */
+export interface AuthSessionStoreHookOptions {
+  flags?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/**
+ * Result returned by the b2c:auth-session-store hook.
+ */
+export interface AuthSessionStoreHookResult {
+  backend?: AuthSessionBackend;
+}
+
+/**
+ * Hook type for b2c:auth-session-store.
+ */
+export type AuthSessionStoreHook = Hook<'b2c:auth-session-store'>;
+
 // Module augmentation for oclif to recognize the custom hook
 declare module '@oclif/core' {
   interface Hooks {
     'b2c:config-sources': {
       options: ConfigSourcesHookOptions;
       return: ConfigSourcesHookResult;
+    };
+    'b2c:auth-session-store': {
+      options: AuthSessionStoreHookOptions;
+      return: AuthSessionStoreHookResult;
     };
   }
 }
