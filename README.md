@@ -365,6 +365,7 @@ security find-generic-password -s 'b2c-cli' -a 'staging' -w | jq .
 
 - Credentials are stored securely by macOS (encrypted at rest)
 - Access is controlled by the Keychain Access application
+- Sign-in session tokens are kept in the Keychain too, rather than in a plain file in the CLI data directory (see [Sign-in Sessions](#sign-in-sessions))
 - The `-w` flag outputs the password to stdout - avoid in scripts that log output
 - Consider adding the CLI to "Always Allow" in Keychain Access for smoother UX
 
